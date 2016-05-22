@@ -7,6 +7,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -18,7 +26,7 @@ import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.text.DefaultCaret;
 
-public class Client extends JFrame {
+public class Client extends JFrame implements Runnable {
 
 
 	private static final long serialVersionUID = 1L;
@@ -28,6 +36,14 @@ public class Client extends JFrame {
 	private JTextField txtMsg;
 	private JTextArea txtrHistory;
 	private DefaultCaret caret;
+	
+	private Socket socket; 
+	private InetAddress ip;
+	private Thread send;
+	private BufferedReader socketIn;
+	private PrintWriter socketOut;
+	private Thread listenThread;
+	boolean running = true;
 
 	/**
 	 * Create the frame.
@@ -38,6 +54,49 @@ public class Client extends JFrame {
 		this.address = address;
 		this.port = port;
 		createWindow();
+		if(openConnection(address, port)){
+			log("Successfully connected to "+address+":"+port);
+			listenThread = new Thread(this, "listenThread");
+			listenThread.start();
+		}else{
+			log("Failed to connect to "+address+":"+port);
+		}
+	}
+	
+	private String recieve(){
+		String message;
+		try {
+			message = socketIn.readLine();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			return "";
+		}
+		return message;
+	}
+	
+	private boolean openConnection(String address, int port){
+		try {
+			ip = InetAddress.getByName(address);
+			socket = new Socket(ip, port);
+			socket.setSoTimeout(1000);
+			socketIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			socketOut = new PrintWriter(socket.getOutputStream());
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			//e.printStackTrace();
+			return false;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			return false;
+		}
+		
+		if(recieve().equals("Connected")){
+			send(name);
+			return true;
+		}
+		
+		return false;
+		
 	}
 	
 	private void createWindow(){
@@ -65,6 +124,7 @@ public class Client extends JFrame {
 		txtrHistory.setEditable(false);
 		caret = (DefaultCaret)txtrHistory.getCaret();
 		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+		txtrHistory.setLineWrap(true);
 		JScrollPane scroll = new JScrollPane(txtrHistory);
 		
 		GridBagConstraints gbc_txtrHistory = new GridBagConstraints();
@@ -81,6 +141,7 @@ public class Client extends JFrame {
 			public void keyPressed(KeyEvent e) {
 				if(e.getKeyCode() == KeyEvent.VK_ENTER){
 					send(txtMsg.getText());
+					txtMsg.setText("");
 				}
 			}
 		});
@@ -96,6 +157,7 @@ public class Client extends JFrame {
 		btnSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				send(txtMsg.getText());
+				txtMsg.setText("");
 			}
 		});
 		GridBagConstraints gbc_btnSend = new GridBagConstraints();
@@ -110,16 +172,32 @@ public class Client extends JFrame {
 		
 	}
 	
-	public void send(String text){
-		if(!text.equals("")){
-			log("<"+name+"> "+text);
-			txtMsg.setText("");
-		}
+	public void send(String msg){
+		send = new Thread("Send"){
+			public void run(){
+				socketOut.println(msg);
+				socketOut.flush();
+			}
+		};
+		send.start();
 	}
 	
 	public void log(String string){
 		txtrHistory.append(string + "\n\r");
 		txtrHistory.setCaretPosition(txtrHistory.getDocument().getLength());
+	}
+
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		while(running){
+			String msg = recieve();
+			if(msg.equals("/u")){
+				send("/u");
+			}else if(!msg.equals("")){
+				log(msg);
+			}
+		}
 	}
 	
 
