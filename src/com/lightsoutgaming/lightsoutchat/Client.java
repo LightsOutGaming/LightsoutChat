@@ -172,7 +172,7 @@ public class Client extends JFrame implements Runnable {
 		
 	}
 	
-	public void send(String msg){
+	public void send(final String msg){
 		send = new Thread("Send"){
 			public void run(){
 				socketOut.println(msg);
