@@ -48,13 +48,13 @@ public class Client extends JFrame implements Runnable {
 	/**
 	 * Create the frame.
 	 */
-	public Client(String name, String address, int port) {
+	public Client(String name, String address, int port, String pass) {
 		setTitle("LightsOutChat");
 		this.name = name;
 		this.address = address;
 		this.port = port;
 		createWindow();
-		if(openConnection(address, port)){
+		if(openConnection(address, port, pass)){
 			log("Successfully connected to "+address+":"+port);
 			listenThread = new Thread(this, "listenThread");
 			listenThread.start();
@@ -74,7 +74,7 @@ public class Client extends JFrame implements Runnable {
 		return message;
 	}
 	
-	private boolean openConnection(String address, int port){
+	private boolean openConnection(String address, int port, String pass){
 		try {
 			ip = InetAddress.getByName(address);
 			socket = new Socket(ip, port);
@@ -91,8 +91,13 @@ public class Client extends JFrame implements Runnable {
 		}
 		
 		if(recieve().equals("Connected")){
-			send(name);
-			return true;
+			send(pass);
+			if(recieve().equals("Approved")){
+				send(name);
+				return true;
+			}else{
+				return false;
+			}
 		}
 		
 		return false;

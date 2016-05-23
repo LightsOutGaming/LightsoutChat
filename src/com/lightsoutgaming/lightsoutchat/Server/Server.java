@@ -13,13 +13,13 @@ public class Server implements Runnable{
 	Thread serverPingLoop;
 	public boolean running = true;
 	ArrayList<Client> clients = new ArrayList<Client>();
+	public static String password = "";
 	
 	public static void main(String[] args){
-		int port = 2576;
 		if(args.length > 0){
-			port = Integer.parseInt(args[0]);
+			password = args[0];
 		}
-		new Server(port);
+		new Server(2576);
 	}
 	
 	public Server(int port){
@@ -45,7 +45,9 @@ public class Server implements Runnable{
 			try {
 				Socket clientSocket = socket.accept();
 				Client client = new Client(this, clientSocket);
-				clients.add(client);
+				if(client.connect()){
+					clients.add(client);
+				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 			}

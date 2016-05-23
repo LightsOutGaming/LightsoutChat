@@ -24,16 +24,34 @@ public class Client implements Runnable {
 		try {
 			socketIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			socketOut = new PrintWriter(socket.getOutputStream());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public boolean connect(){
+		try {
 			socketOut.println("Connected");
+			socketOut.flush();
+			String pass = socketIn.readLine();
+			if(!pass.equals(server.password)){
+				socketOut.println("Denied");
+				socketOut.flush();
+				return false;
+			}
+			socketOut.println("Approved");
 			socketOut.flush();
 			name = socketIn.readLine();
 			listenThread = new Thread(this, name+"'s listen thread");
 			listenThread.start();
 			server.sendToAll(name+" has Connected.");
 			System.out.println(name+" has Connected.");
+			return true;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return false;
 		}
 	}
 
